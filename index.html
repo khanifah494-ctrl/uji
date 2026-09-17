@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eOSIS - Sistem Pemilihan OSIS Online</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts - Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Vue 3 JS -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- SheetJS / XLSX for Excel Export & Import -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #0f172a;
+            --accent-color: #3b82f6;
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --sidebar-width: 260px;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-body);
+            color: #334155;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .brand-box {
+            padding: 1.5rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar .nav-link {
+            color: #94a3b8;
+            padding: 0.8rem 1.25rem;
+            margin: 0.2rem 0.8rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: #ffffff;
+            background-color: rgba(37, 99, 235, 0.9);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 991.98px) {
+            .sidebar {
+                margin-left: calc(-1 * var(--sidebar-width));
+            }
+            .sidebar.show {
+                margin-left: 0;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+
+        /* Custom Card & UI */
+        .card-stat {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card-stat:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+        }
+
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .candidate-card {
+            border: none;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            background: #ffffff;
+        }
+
+        .candidate-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 15px 35px rgba(37, 99, 235, 0.12);
+        }
+
+        .candidate-number {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(15, 23, 42, 0.85);
+            color: white;
+            font-weight: 800;
+            font-size: 1.25rem;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255,255,255,0.3);
+            z-index: 2;
+        }
+
+        .candidate-img-wrapper {
+            height: 280px;
+            overflow: hidden;
+            position: relative;
+            background: #e2e8f0;
+        }
+
+        .candidate-img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .candidate-card:hover .candidate-img-wrapper img {
+            transform: scale(1.05);
+        }
+
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+        }
+
+        .bg-gradient-dark {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 0.6rem 1.4rem;
+            font-weight: 600;
+            border-radius: 0.6rem;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .token-badge {
+            font-family: monospace;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            background: #f1f5f9;
+            padding: 0.3rem 0.8rem;
+            border-radius: 0.5rem;
+            color: #0f172a;
+            font-weight: 700;
+            border: 1px dashed #cbd5e1;
+        }
+
+        .upload-dropzone {
+            border: 2px dashed #3b82f6;
+            background: #eff6ff;
+            border-radius: 1rem;
+            padding: 2.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-dropzone:hover {
+            background: #dbeafe;
+            border-color: #2563eb;
+        }
+
+        /* Modal Vote Animation */
+        .vote-success-card {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .countdown-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #eff6ff;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin: 0 auto 1.5rem;
+            border: 4px solid #bfdbfe;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- ALERT TOAST / NOTIFICATION -->
+        <div class="position-fixed top-0 end-0 p-3" style="z-index: 2000">
+            <div v-if="toast.show" class="toast show align-items-center text-white border-0 shadow-lg" :class="'bg-' + toast.type" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body d-flex align-items-center gap-2 fs-6">
+                        <i :class="toast.icon"></i>
+                        <span>{{ toast.message }}</span>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="toast.show = false"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STUDENT / USER VIEW -->
+        <div v-if="currentRole === 'user'">
+            <!-- Student Header -->
+            <nav class="navbar navbar-expand-lg navbar-dark bg-gradient-dark shadow-sm py-3">
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center gap-3 fw-bold" href="#">
+                        <img :src="settings.school_logo || defaultLogo" @error="$event.target.src = defaultLogo" alt="Logo" height="42" width="42" class="rounded-circle bg-white p-1" style="object-fit: contain;">
+                        <div>
+                            <div class="lh-1 fs-5">{{ settings.school_name }}</div>
+                            <small class="text-primary-light fw-normal fs-7 opacity-75">eOSIS - {{ settings.election_period }}</small>
+                        </div>
+                    </a>
+                    <div v-if="loggedStudent" class="d-flex align-items-center gap-3">
+                        <span class="text-white d-none d-md-inline">
+                            <i class="bi bi-person-circle me-1"></i> {{ loggedStudent.name }} ({{ loggedStudent.class_name }})
+                        </span>
+                        <button @click="logoutStudent" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                            <i class="bi bi-box-arrow-right me-1"></i> Keluar
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Student Login Screen -->
+            <div v-if="!loggedStudent" class="container py-5">
+                <div class="row justify-content-center my-4">
+                    <div class="col-md-5 col-lg-4">
+                        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                            <div class="bg-gradient-primary p-4 text-center text-white">
+                                <img :src="settings.school_logo || defaultLogo" @error="$event.target.src = defaultLogo" alt="Logo Sekolah" class="bg-white p-2 rounded-circle shadow-sm mb-2" style="width: 80px; height: 80px; object-fit: contain;">
+                                <h4 class="fw-bold mb-1">Masuk Pemilih</h4>
+                                <p class="small text-white-50 mb-0">Masukkan Token Akses Resmi untuk Memulai</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <form @submit.prevent="loginStudent">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold">Token Akses Voting (5 Digit)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-key-fill text-primary"></i></span>
+                                            <input type="text" v-model="studentLoginForm.token" class="form-control form-control-lg text-uppercase fw-bold tracking-wider" placeholder="Contoh: K89F2" maxlength="5" required>
+                                        </div>
+                                        <div class="form-text">Masukkan token unik 5 digit yang diberikan oleh panitia.</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm" :disabled="loading.login">
+                                        <span v-if="loading.login" class="spinner-border spinner-border-sm me-2"></span>
+                                        <i v-else class="bi bi-box-arrow-in-right me-2"></i> Masuk & Buka Surat Suara
+                                    </button>
+                                </form>
+
+                                <hr class="my-4">
+                                <div class="text-center">
+                                    <button @click="switchToAdminLogin" class="btn btn-link text-decoration-none text-muted small">
+                                        <i class="bi bi-shield-lock me-1"></i> Portal Panitia / Generator Token Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Dashboard & Voting Room -->
+            <div v-else class="container py-4">
+                <!-- Voter Status Card -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8 mb-3 mb-md-0">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-primary-subtle text-primary p-3 rounded-circle fs-3">
+                                        <i class="bi bi-person-badge-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="fw-bold mb-1">{{ loggedStudent.name }}</h4>
+                                        <div class="text-muted d-flex flex-wrap gap-3 small">
+                                            <span><i class="bi bi-card-heading me-1"></i> NISN: <strong>{{ loggedStudent.nisn || '-' }}</strong></span>
+                                            <span><i class="bi bi-building me-1"></i> Kelas: <strong>{{ loggedStudent.class_name }}</strong></span>
+                                            <span><i class="bi bi-ticket-perforated me-1"></i> Token: <strong class="token-badge px-2 py-0 fs-7">{{ loggedStudent.token }}</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <div v-if="loggedStudent.has_voted" class="badge bg-success-subtle text-success p-3 rounded-3 fs-6 d-inline-flex align-items-center gap-2">
+                                    <i class="bi bi-check-circle-fill fs-5"></i>
+                                    <div>
+                                        <div class="fw-bold">Sudah Menggunakan Hak Suara</div>
+                                        <small class="fw-normal">Terima kasih atas partisipasi Anda!</small>
+                                    </div>
+                                </div>
+                                <div v-else class="badge bg-warning-subtle text-warning-emphasis p-3 rounded-3 fs-6 d-inline-flex align-items-center gap-2">
+                                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                                    <div>
+                                        <div class="fw-bold">Belum Memilih</div>
+                                        <small class="fw-normal">Silakan tentukan pilihan Anda di bawah ini</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ALREADY VOTED NOTICE BOARD -->
+                <div v-if="loggedStudent.has_voted" class="card border-0 shadow-sm rounded-4 text-center p-5 my-4 bg-white">
+                    <div class="py-4">
+                        <i class="bi bi-patch-check-fill text-success display-1 mb-3 d-inline-block"></i>
+                        <h2 class="fw-bold text-dark mb-2">Anda Sudah Menggunakan Hak Suara</h2>
+                        <p class="text-muted max-w-lg mx-auto fs-5 mb-4">
+                            Satu token hanya berlaku untuk satu kali pemilihan. Suara Anda telah tersimpan secara anonim.
+                        </p>
+                        <button @click="logoutStudent" class="btn btn-outline-primary btn-lg rounded-pill px-5 fw-bold">
+                            <i class="bi bi-arrow-left me-2"></i> Kembali ke Halaman Utama
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BALLOT CANDIDATES LIST -->
+                <div v-else>
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div>
+                            <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-card-checklist text-primary me-2"></i> Surat Suara Calon Ketua & Wakil OSIS</h3>
+                            <p class="text-muted mb-0">Pilih salah satu Pasangan Calon (Paslon) dengan menekan tombol <strong>"Berikan Suara"</strong></p>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div v-for="candidate in candidates" :key="candidate.id" class="col-md-6 col-lg-4">
+                            <div class="card candidate-card h-100">
+                                <div class="candidate-img-wrapper">
+                                    <div class="candidate-number">0{{ candidate.candidate_number }}</div>
+                                    <img :src="candidate.photo_url || defaultCandidatePhoto" :alt="candidate.chairman_name">
+                                </div>
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <h5 class="fw-bold text-dark mb-1">{{ candidate.chairman_name }}</h5>
+                                    <h6 class="text-primary fw-semibold mb-3"><i class="bi bi-person-heart me-1"></i> & {{ candidate.vice_chairman_name }}</h6>
+                                    
+                                    <div class="bg-light p-3 rounded-3 mb-3 border-start border-4 border-primary">
+                                        <small class="text-uppercase fw-bold text-muted d-block mb-1" style="font-size: 0.7rem;">Slogan / Tagline</small>
+                                        <p class="fst-italic mb-0 text-dark fw-medium fs-6">"{{ candidate.slogan || 'Mewujudkan OSIS Unggul dan Berintegritas' }}"</p>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong class="d-block mb-1 text-dark"><i class="bi bi-eye-fill text-secondary me-1"></i> Visi:</strong>
+                                        <p class="small text-muted mb-3 lh-sm">{{ candidate.vision }}</p>
+
+                                        <strong class="d-block mb-1 text-dark"><i class="bi bi-list-stars text-secondary me-1"></i> Misi Utama:</strong>
+                                        <p class="small text-muted mb-0 lh-sm whitespace-pre-line">{{ candidate.mission }}</p>
+                                    </div>
+
+                                    <div class="mt-auto pt-3">
+                                        <button @click="confirmVoteModal(candidate)" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm">
+                                            <i class="bi bi-check2-circle me-2"></i> Berikan Suara
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN VIEW -->
+        <div v-if="currentRole === 'admin'">
+            <!-- Admin Login Screen -->
+            <div v-if="!adminLoggedIn" class="container py-5">
+                <div class="row justify-content-center my-5">
+                    <div class="col-md-5 col-lg-4">
+                        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                            <div class="bg-gradient-dark p-4 text-center text-white">
+                                <i class="bi bi-shield-lock-fill display-4 text-primary mb-2 d-inline-block"></i>
+                                <h4 class="fw-bold mb-1">Login Admin Panel</h4>
+                                <p class="small text-white-50 mb-0">eOSIS Management System</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <form @submit.prevent="loginAdmin">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Username Admin</label>
+                                        <input type="text" v-model="adminLoginForm.username" class="form-control form-control-lg" required placeholder="Masukkan username">
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold">Password</label>
+                                        <input type="password" v-model="adminLoginForm.password" class="form-control form-control-lg" required placeholder="Masukkan password">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i> Masuk Admin
+                                    </button>
+                                </form>
+                                <hr class="my-4">
+                                <div class="text-center">
+                                    <button @click="switchToUserLogin" class="btn btn-link text-decoration-none text-muted small">
+                                        <i class="bi bi-arrow-left me-1"></i> Kembali ke Halaman Pemilih Siswa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Main Layout -->
+            <div v-else>
+                <!-- Sidebar Nav -->
+                <nav class="sidebar" :class="{ show: showMobileSidebar }">
+                    <div class="brand-box d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <img :src="settings.school_logo || defaultLogo" @error="$event.target.src = defaultLogo" alt="Logo" height="36" width="36" class="rounded-circle bg-white p-1" style="object-fit: contain;">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-white fs-6">eOSIS Admin</h6>
+                                <small class="text-muted" style="font-size: 0.75rem;">{{ settings.school_name }}</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-dark d-lg-none" @click="showMobileSidebar = false"><i class="bi bi-x-lg"></i></button>
+                    </div>
+
+                    <div class="py-3">
+                        <a href="#" class="nav-link" :class="{ active: activeAdminTab === 'dashboard' }" @click.prevent="activeAdminTab = 'dashboard'">
+                            <i class="bi bi-speedometer2"></i> Beranda
+                        </a>
+                        <a href="#" class="nav-link" :class="{ active: activeAdminTab === 'token_generator' }" @click.prevent="activeAdminTab = 'token_generator'">
+                            <i class="bi bi-key-fill text-warning"></i> Generator Token Excel
+                        </a>
+                        <a href="#" class="nav-link" :class="{ active: activeAdminTab === 'classes' }" @click.prevent="activeAdminTab = 'classes'">
+                            <i class="bi bi-building"></i> Data Kelas
+                        </a>
+                        <a href="#" class="nav-link" :class="{ active: activeAdminTab === 'students' }" @click.prevent="activeAdminTab = 'students'">
+                            <i class="bi bi-people-fill"></i> Data Siswa / Voter
+                        </a>
+                        <a href="#" class="nav-link" :class="{ active: activeAdminTab === 'candidates' }" @click.prevent="activeAdminTab = 'candidates'">
+                            <i class="bi bi-person-badge"></i> Calon Kandidat
+                        </a>
+                        <a href="#" class="nav-link" :class="{ active: activeAdminTab === 'votes' }" @click.prevent="activeAdminTab = 'votes'">
+                            <i class="bi bi-bar-chart-line-fill"></i> Perolehan Suara
+                        </a>
+                        <a href="#" class="nav-link" :class="{ active: activeAdminTab === 'settings' }" @click.prevent="activeAdminTab = 'settings'">
+                            <i class="bi bi-gear-wide-connected"></i> Pengaturan
+                        </a>
+                        <a href="#" class="nav-link text-danger mt-4" @click.prevent="logoutAdmin">
+                            <i class="bi bi-box-arrow-right"></i> Keluar
+                        </a>
+                    </div>
+                </nav>
+
+                <!-- Admin Main Content Area -->
+                <div class="main-content">
+                    <!-- Top Navbar Mobile Toggle -->
+                    <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+                        <div class="d-flex align-items-center gap-3">
+                            <button class="btn btn-outline-dark d-lg-none" @click="showMobileSidebar = true">
+                                <i class="bi bi-list fs-5"></i>
+                            </button>
+                            <h4 class="fw-bold mb-0 text-dark">{{ getTabTitle(activeAdminTab) }}</h4>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill">
+                                <i class="bi bi-calendar-check me-1"></i> Periode: {{ settings.election_period }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- TAB SPECIAL: GENERATOR TOKEN EXCEL -->
+                    <div v-if="activeAdminTab === 'token_generator'">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div>
+                                    <h4 class="fw-bold text-dark mb-1"><i class="bi bi-key-fill text-primary me-2"></i> Generator Token 5 Digit Abstrak (File Excel / CSV)</h4>
+                                    <p class="text-muted mb-0">Unggah file Excel / CSV daftar hadir siswa Anda. Sistem secara otomatis membaca kolom <strong>Nama</strong> dan membuatkan 1 Token 5 Digit Unik tanpa duplikat.</p>
+                                </div>
+                            </div>
+
+                            <!-- Config Mode Token & Format Export Selection -->
+                            <div class="row g-3 my-2 p-3 bg-light rounded-3 border">
+                                <div class="col-md-5">
+                                    <label class="form-label fw-bold small text-muted">Format Token 5 Digit</label>
+                                    <div class="d-flex flex-column gap-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" v-model="tokenFormatMode" value="alphanumeric" id="fmtAlphanumeric">
+                                            <label class="form-check-label fw-semibold" for="fmtAlphanumeric">
+                                                Alfanumerik Abstrak (Contoh: <code>7K8M2</code>, <code>X93P1</code>)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" v-model="tokenFormatMode" value="numeric" id="fmtNumeric">
+                                            <label class="form-check-label fw-semibold" for="fmtNumeric">
+                                                Angka murni 5 Digit (Contoh: <code>83910</code>, <code>14092</code>)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small text-muted">Format File Hasil Ekspor</label>
+                                    <select v-model="selectedExportFormat" class="form-select fw-semibold border-primary-subtle">
+                                        <option value="xlsx">.XLSX (Excel Standard 2007+)</option>
+                                        <option value="xls">.XLS (Excel Legacy 97-2003)</option>
+                                        <option value="csv">.CSV (Comma Separated Values)</option>
+                                    </select>
+                                    <small class="text-muted" style="font-size: 0.75rem;">Setiap file hasil unduhan pasti memiliki kolom <b>Nama</b>.</small>
+                                </div>
+
+                                <div class="col-md-3 d-flex align-items-center">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 w-100 text-center fs-7">
+                                        <i class="bi bi-shield-check me-1"></i> Dijamin 100% Unik & Tidak Duplikat
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Drag & Drop Upload Zone -->
+                            <div class="upload-dropzone my-3" @click="triggerExcelImport" @dragover.prevent @drop.prevent="handleExcelDrop">
+                                <i class="bi bi-file-earmark-spreadsheet-fill text-primary display-3 d-block mb-2"></i>
+                                <h5 class="fw-bold text-dark mb-1">Pilih atau Seret File Excel / CSV Di Sini</h5>
+                                <p class="text-muted small mb-3">Mendukung format <code>.xlsx</code>, <code>.xls</code>, atau <code>.csv</code> (Mendeteksi kolom Nama secara otomatis)</p>
+                                <button type="button" class="btn btn-primary px-4 fw-bold rounded-pill">
+                                    <i class="bi bi-folder2-open me-2"></i> Unggah File & Generate Token
+                                </button>
+                                <input type="file" ref="excelFileInput" @change="handleExcelImport" accept=".xlsx, .xls, .csv" style="display: none;">
+                            </div>
+                        </div>
+
+                        <!-- Preview Hasil Token Jika Ada Data -->
+                        <div v-if="generatedTokenList.length > 0" class="card border-0 shadow-sm rounded-4 p-4">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-0">Hasil Token Generasi Terbaru ({{ generatedTokenList.length }} Siswa)</h5>
+                                    <small class="text-muted">Semua siswa berhasil dipasangkan dengan Token 5 Digit Unik pada kolom Nama.</small>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <div class="btn-group">
+                                        <button @click="downloadGeneratedTokensExcel(selectedExportFormat)" class="btn btn-success fw-bold">
+                                            <i class="bi bi-download me-1"></i> Unduh File Token (.{{ selectedExportFormat.toUpperCase() }})
+                                        </button>
+                                        <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <span class="visually-hidden">Toggle Dropdown</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                                            <li><a class="dropdown-item fw-medium" href="#" @click.prevent="downloadGeneratedTokensExcel('xlsx')"><i class="bi bi-file-earmark-excel text-success me-2"></i>Format .XLSX (Excel)</a></li>
+                                            <li><a class="dropdown-item fw-medium" href="#" @click.prevent="downloadGeneratedTokensExcel('xls')"><i class="bi bi-file-earmark-excel-fill text-success me-2"></i>Format .XLS (Excel 97-2003)</a></li>
+                                            <li><a class="dropdown-item fw-medium" href="#" @click.prevent="downloadGeneratedTokensExcel('csv')"><i class="bi bi-file-earmark-text text-primary me-2"></i>Format .CSV (Teks)</a></li>
+                                        </ul>
+                                    </div>
+                                    <button @click="importGeneratedToDatabase" class="btn btn-outline-primary fw-bold">
+                                        <i class="bi bi-box-arrow-in-down me-1"></i> Masukkan ke Database Voter eOSIS
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>No</th>
+                                            <th>NISN</th>
+                                            <th class="bg-primary-subtle text-primary">Nama / Nama Lengkap</th>
+                                            <th>Kelas</th>
+                                            <th>Token 5 Digit (Abstrak)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(item, idx) in generatedTokenList" :key="idx">
+                                            <td>{{ idx + 1 }}</td>
+                                            <td><code>{{ item.nisn || '-' }}</code></td>
+                                            <td class="fw-bold text-dark">{{ item.name }}</td>
+                                            <td>{{ item.class_name || 'Umum' }}</td>
+                                            <td><span class="token-badge text-primary">{{ item.token }}</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 1: BERANDA / DASHBOARD -->
+                    <div v-if="activeAdminTab === 'dashboard'">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6 col-xl-3">
+                                <div class="card card-stat p-3 bg-white">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="text-muted small fw-semibold">Total Siswa / DPT</span>
+                                            <h3 class="fw-bold text-dark mt-1 mb-0">{{ stats.totalStudents }}</h3>
+                                        </div>
+                                        <div class="stat-icon bg-primary-subtle text-primary">
+                                            <i class="bi bi-people-fill"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <div class="card card-stat p-3 bg-white">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="text-muted small fw-semibold">Sudah Memilih</span>
+                                            <h3 class="fw-bold text-success mt-1 mb-0">{{ stats.votedCount }}</h3>
+                                        </div>
+                                        <div class="stat-icon bg-success-subtle text-success">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <div class="card card-stat p-3 bg-white">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="text-muted small fw-semibold">Belum Memilih</span>
+                                            <h3 class="fw-bold text-warning mt-1 mb-0">{{ stats.unvotedCount }}</h3>
+                                        </div>
+                                        <div class="stat-icon bg-warning-subtle text-warning">
+                                            <i class="bi bi-clock-history"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <div class="card card-stat p-3 bg-white">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <span class="text-muted small fw-semibold">Partisipasi Suara</span>
+                                            <h3 class="fw-bold text-primary mt-1 mb-0">{{ stats.participationPercentage }}%</h3>
+                                        </div>
+                                        <div class="stat-icon bg-info-subtle text-info">
+                                            <i class="bi bi-pie-chart-fill"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar Overall -->
+                        <div class="card border-0 shadow-sm rounded-4 mb-4 p-4">
+                            <h6 class="fw-bold text-dark mb-2">Persentase Partisipasi Pemilihan</h6>
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" role="progressbar" :style="{ width: stats.participationPercentage + '%' }">
+                                    {{ stats.participationPercentage }}%
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ stats.votedCount }} dari {{ stats.totalStudents }} siswa telah menyalurkan suaranya.</small>
+                        </div>
+
+                        <!-- Quick Overview Row -->
+                        <div class="row g-4">
+                            <div class="col-lg-7">
+                                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Ringkasan Quick Chart</h5>
+                                    <canvas id="dashboardQuickChart" style="max-height: 280px;"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-info-circle-fill me-2 text-info"></i>Informasi Sistem eOSIS</h5>
+                                    <ul class="list-group list-group-flush small">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                                            <span>Sekolah</span>
+                                            <strong class="text-dark">{{ settings.school_name }}</strong>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                                            <span>Jumlah Kelas Data</span>
+                                            <strong class="text-dark">{{ classes.length }} Kelas</strong>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                                            <span>Jumlah Paslon Candidates</span>
+                                            <strong class="text-dark">{{ candidates.length }} Paslon</strong>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                                            <span>Format Token Voter</span>
+                                            <span class="badge bg-primary"><i class="bi bi-key-fill me-1"></i> 5 Digit Unique Abstract</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: DATA KELAS -->
+                    <div v-if="activeAdminTab === 'classes'">
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                                <h5 class="fw-bold mb-0">Daftar Kelas</h5>
+                                <button class="btn btn-primary" @click="openClassModal()">
+                                    <i class="bi bi-plus-circle me-1"></i> Tambah Kelas Baru
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="80">No</th>
+                                            <th>Nama Kelas</th>
+                                            <th>Jumlah Siswa Terdaftar</th>
+                                            <th width="150" class="text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(cls, idx) in classes" :key="cls.id">
+                                            <td>{{ idx + 1 }}</td>
+                                            <td class="fw-semibold text-dark">{{ cls.name }}</td>
+                                            <td>
+                                                <span class="badge bg-secondary-subtle text-secondary px-3 py-2">
+                                                    {{ getStudentCountByClass(cls.name) }} Siswa
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <button @click="openClassModal(cls)" class="btn btn-sm btn-outline-primary me-2"><i class="bi bi-pencil"></i></button>
+                                                <button @click="deleteClass(cls.id)" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="classes.length === 0">
+                                            <td colspan="4" class="text-center text-muted py-4">Belum ada data kelas. Silakan tambah data baru.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: DATA SISWA / USER -->
+                    <div v-if="activeAdminTab === 'students'">
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                                <div>
+                                    <h5 class="fw-bold mb-1">Daftar Siswa & Token Pemilih (5 Digit)</h5>
+                                    <p class="text-muted small mb-0">
+                                        Kelola NISN, Nama Siswa, Token 5 digit | 
+                                        <span class="dropdown d-inline-block">
+                                            <a href="#" class="text-primary fw-semibold text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                                                <i class="bi bi-download me-1"></i>Unduh Format Template
+                                            </a>
+                                            <ul class="dropdown-menu shadow">
+                                                <li><a class="dropdown-item small" href="#" @click.prevent="downloadExcelTemplate('xlsx')">Template .XLSX</a></li>
+                                                <li><a class="dropdown-item small" href="#" @click.prevent="downloadExcelTemplate('xls')">Template .XLS</a></li>
+                                                <li><a class="dropdown-item small" href="#" @click.prevent="downloadExcelTemplate('csv')">Template .CSV</a></li>
+                                            </ul>
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-success fw-semibold" @click="openImportExcelModal">
+                                        <i class="bi bi-file-earmark-excel-fill me-1"></i> Impor dari Excel
+                                    </button>
+                                    <button class="btn btn-outline-primary" @click="activeAdminTab = 'token_generator'">
+                                        <i class="bi bi-file-earmark-arrow-up me-1"></i> Generator Token Excel
+                                    </button>
+                                    <div class="btn-group">
+                                        <button class="btn btn-outline-success" @click="exportStudentsToExcel(selectedExportFormat)">
+                                            <i class="bi bi-file-earmark-excel me-1"></i> Ekspor Data Siswa (.{{ selectedExportFormat.toUpperCase() }})
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <span class="visually-hidden">Toggle</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                                            <li><a class="dropdown-item" href="#" @click.prevent="exportStudentsToExcel('xlsx')">Ekspor .XLSX</a></li>
+                                            <li><a class="dropdown-item" href="#" @click.prevent="exportStudentsToExcel('xls')">Ekspor .XLS</a></li>
+                                            <li><a class="dropdown-item" href="#" @click.prevent="exportStudentsToExcel('csv')">Ekspor .CSV</a></li>
+                                        </ul>
+                                    </div>
+                                    <button class="btn btn-outline-secondary" @click="generateAllTokens5Digit">
+                                        <i class="bi bi-arrow-repeat me-1"></i> Auto-Generate All 5-Digit Tokens
+                                    </button>
+                                    <button class="btn btn-outline-primary" @click="openStudentModal()">
+                                        <i class="bi bi-person-plus me-1"></i> Tambah Manual
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Filter & Search Bar -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                        <input type="text" v-model="studentSearch" class="form-control" placeholder="Cari Nama / NISN / Token 5 Digit...">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <select v-model="studentClassFilter" class="form-select">
+                                        <option value="">-- Semua Kelas --</option>
+                                        <option v-for="cls in classes" :key="cls.id" :value="cls.name">{{ cls.name }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select v-model="studentStatusFilter" class="form-select">
+                                        <option value="">-- Semua Status --</option>
+                                        <option value="voted">Sudah Memilih</option>
+                                        <option value="unvoted">Belum Memilih</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>No</th>
+                                            <th>NISN</th>
+                                            <th>Nama Lengkap</th>
+                                            <th>Kelas</th>
+                                            <th>Token Pemilih (5 Digit)</th>
+                                            <th>Status Suara</th>
+                                            <th class="text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(std, idx) in filteredStudents" :key="std.id">
+                                            <td>{{ idx + 1 }}</td>
+                                            <td><code>{{ std.nisn || '-' }}</code></td>
+                                            <td class="fw-semibold text-dark">{{ std.name }}</td>
+                                            <td>{{ std.class_name }}</td>
+                                            <td><span class="token-badge text-primary">{{ std.token }}</span></td>
+                                            <td>
+                                                <span v-if="std.has_voted" class="badge bg-success-subtle text-success px-3 py-2">
+                                                    <i class="bi bi-check-circle-fill me-1"></i> Sudah Memilih
+                                                </span>
+                                                <span v-else class="badge bg-warning-subtle text-warning-emphasis px-3 py-2">
+                                                    <i class="bi bi-clock-history me-1"></i> Belum Memilih
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <button @click="openStudentModal(std)" class="btn btn-sm btn-outline-primary me-1" title="Edit"><i class="bi bi-pencil"></i></button>
+                                                <button @click="resetStudentVote(std)" class="btn btn-sm btn-outline-warning me-1" title="Reset Status Hak Suara"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                                <button @click="deleteStudent(std.id)" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="filteredStudents.length === 0">
+                                            <td colspan="7" class="text-center text-muted py-4">Tidak ada data siswa yang cocok.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: CALON KANDIDAT -->
+                    <div v-if="activeAdminTab === 'candidates'">
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                                <div>
+                                    <h5 class="fw-bold mb-1">Daftar Pasangan Calon Kandidat</h5>
+                                    <p class="text-muted small mb-0">Atur nomor urut, foto, visi, misi, dan slogan paslon OSIS</p>
+                                </div>
+                                <button class="btn btn-primary" @click="openCandidateModal()">
+                                    <i class="bi bi-plus-circle me-1"></i> Tambah Candidate Baru
+                                </button>
+                            </div>
+
+                            <div class="row g-4">
+                                <div v-for="cand in candidates" :key="cand.id" class="col-md-6 col-lg-4">
+                                    <div class="card candidate-card h-100 border">
+                                        <div class="candidate-img-wrapper">
+                                            <div class="candidate-number">0{{ cand.candidate_number }}</div>
+                                            <img :src="cand.photo_url || defaultCandidatePhoto" :alt="cand.chairman_name">
+                                        </div>
+                                        <div class="card-body p-4 d-flex flex-column">
+                                            <h5 class="fw-bold text-dark mb-1">{{ cand.chairman_name }}</h5>
+                                            <h6 class="text-primary fw-semibold mb-2">& {{ cand.vice_chairman_name }}</h6>
+                                            <p class="small text-muted fst-italic mb-3">"{{ cand.slogan }}"</p>
+                                            
+                                            <div class="mt-auto d-flex gap-2 pt-2">
+                                                <button @click="openCandidateModal(cand)" class="btn btn-outline-primary btn-sm w-100 fw-semibold">
+                                                    <i class="bi bi-pencil me-1"></i> Edit
+                                                </button>
+                                                <button @click="deleteCandidate(cand.id)" class="btn btn-outline-danger btn-sm w-100 fw-semibold">
+                                                    <i class="bi bi-trash me-1"></i> Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 5: PEROLEHAN SUARA -->
+                    <div v-if="activeAdminTab === 'votes'">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h5 class="fw-bold mb-1">Hasil Perolehan Suara Real-time</h5>
+                                    <p class="text-muted small mb-0">Total Suara Masuk: <strong class="text-primary fs-6">{{ stats.votedCount }} Suara</strong></p>
+                                </div>
+                                <button @click="fetchInitialData" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh Data
+                                </button>
+                            </div>
+
+                            <div class="row g-4 mb-4">
+                                <div class="col-lg-6">
+                                    <h6 class="fw-bold text-dark mb-3">Grafik Batang Perolehan Suara</h6>
+                                    <canvas id="voteBarChart" style="max-height: 300px;"></canvas>
+                                </div>
+                                <div class="col-lg-6">
+                                    <h6 class="fw-bold text-dark mb-3">Grafik Lingkaran (Proporsi)</h6>
+                                    <canvas id="votePieChart" style="max-height: 300px;"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Table Vote Breakdown -->
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>No. Urut</th>
+                                            <th>Pasangan Calon</th>
+                                            <th>Perolehan Suara</th>
+                                            <th>Persentase</th>
+                                            <th>Progress Bar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="cand in candidates" :key="cand.id">
+                                            <td class="fw-bold fs-5 text-primary">0{{ cand.candidate_number }}</td>
+                                            <td>
+                                                <strong class="text-dark">{{ cand.chairman_name }}</strong>
+                                                <div class="small text-muted">& {{ cand.vice_chairman_name }}</div>
+                                            </td>
+                                            <td class="fw-bold fs-5 text-dark">{{ cand.vote_count || 0 }} Suara</td>
+                                            <td><span class="badge bg-primary px-3 py-2 fs-6">{{ getCandidatePercentage(cand.vote_count) }}%</span></td>
+                                            <td style="width: 30%;">
+                                                <div class="progress" style="height: 12px;">
+                                                    <div class="progress-bar bg-primary" :style="{ width: getCandidatePercentage(cand.vote_count) + '%' }"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 6: PENGATURAN & DATABASE SQL SETUP -->
+                    <div v-if="activeAdminTab === 'settings'">
+                        <div class="row g-4">
+                            <div class="col-lg-6">
+                                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-sliders me-2 text-primary"></i>Pengaturan Aplikasi eOSIS</h5>
+                                    <form @submit.prevent="saveSettings">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold">Nama Sekolah / Instansi</label>
+                                            <input type="text" v-model="settingsForm.school_name" class="form-control" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold">Periode Pemilihan</label>
+                                            <input type="text" v-model="settingsForm.election_period" class="form-control" placeholder="Contoh: 2026/2027" required>
+                                        </div>
+                                        
+                                        <!-- SEKSI MANAJEMEN LOGO SEKOLAH -->
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold">Logo Sekolah</label>
+                                            <div class="d-flex align-items-center gap-3 mb-2 p-2 border rounded-3 bg-light">
+                                                <img :src="settingsForm.school_logo || defaultLogo" @error="$event.target.src = defaultLogo" height="50" width="50" class="rounded-circle bg-white p-1 border" style="object-fit: contain;" alt="Preview Logo">
+                                                <div>
+                                                    <div class="fw-semibold text-dark small">Pratinjau Logo</div>
+                                                    <span class="text-muted extra-small" style="font-size: 0.75rem;">Bisa upload gambar dari perangkat atau tautan URL.</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label small text-muted mb-1">Unggah File Logo (PNG, JPG, SVG)</label>
+                                                <input type="file" accept="image/*" @change="handleLogoFileUpload" class="form-control form-control-sm">
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label fw-semibold">Ganti Username Admin</label>
+                                            <input type="text" v-model="settingsForm.admin_username" class="form-control" required>
+                                        </div>
+                                        <div class="mb-4">
+                                            <label class="form-label fw-semibold">Ganti Password Admin</label>
+                                            <input type="password" v-model="settingsForm.new_password" class="form-control" placeholder="Password baru">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100 fw-bold">
+                                            <i class="bi bi-save me-1"></i> Simpan Pengaturan
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                                    <h5 class="fw-bold text-dark mb-2"><i class="bi bi-database-gear me-2 text-primary"></i>Supabase Schema DDL SQL</h5>
+                                    <p class="small text-muted mb-3">Copy dan paste script SQL berikut di <strong>Supabase SQL Editor</strong> Anda:</p>
+                                    
+                                    <div class="position-relative">
+                                        <textarea class="form-control font-monospace bg-dark text-light p-3 rounded-3" rows="11" readonly style="font-size: 0.78rem;">{{ sqlScript }}</textarea>
+                                        <button @click="copySqlScript" class="btn btn-sm btn-light position-absolute top-0 end-0 m-2">
+                                            <i class="bi bi-copy me-1"></i> Copy SQL
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: CONFIRM VOTE FOR STUDENT -->
+        <div class="modal fade" id="confirmVoteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+                    <div class="bg-gradient-primary p-4 text-center text-white">
+                        <i class="bi bi-question-circle-fill display-3 mb-2 d-inline-block"></i>
+                        <h4 class="fw-bold mb-0">Konfirmasi Suara Anda</h4>
+                    </div>
+                    <div class="modal-body p-4 text-center" v-if="selectedCandidateToVote">
+                        <p class="text-muted mb-3">Apakah Anda yakin ingin memberikan suara kepada Pasangan Calon:</p>
+                        <div class="card border border-primary-subtle rounded-3 p-3 bg-light mb-3">
+                            <div class="fw-bold fs-4 text-primary mb-1">Nomor Urut 0{{ selectedCandidateToVote.candidate_number }}</div>
+                            <h5 class="fw-bold text-dark mb-0">{{ selectedCandidateToVote.chairman_name }}</h5>
+                            <small class="text-muted">& {{ selectedCandidateToVote.vice_chairman_name }}</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0 p-3 justify-content-center gap-2">
+                        <button type="button" class="btn btn-outline-secondary px-4 rounded-3" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary px-4 rounded-3 fw-bold" @click="submitVote" :disabled="loading.submitVote">
+                            <span v-if="loading.submitVote" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-check-circle me-1"></i> Yakin, Simpan Suara Saya
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: VOTE SUCCESS COUNTDOWN -->
+        <div class="modal fade" id="voteSuccessModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4 shadow-lg p-4 text-center vote-success-card">
+                    <div class="countdown-circle">{{ countdownSeconds }}</div>
+                    <h3 class="fw-bold text-dark mb-2">Suara Anda Berhasil Dicatat!</h3>
+                    <p class="text-muted mb-4">Terima kasih telah berpartisipasi dalam pemilihan OSIS ini.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: CLASS EDIT/ADD -->
+        <div class="modal fade" id="classModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="fw-bold modal-title">{{ classForm.id ? 'Edit Kelas' : 'Tambah Kelas Baru' }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="saveClass">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nama Kelas</label>
+                                <input type="text" v-model="classForm.name" class="form-control" placeholder="Contoh: X IPA 1, XII IPS 2" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary fw-bold">Simpan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: STUDENT EDIT/ADD -->
+        <div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="fw-bold modal-title">{{ studentForm.id ? 'Edit Data Siswa' : 'Tambah Siswa Baru' }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="saveStudent">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">NISN</label>
+                                <input type="text" v-model="studentForm.nisn" class="form-control" placeholder="10 Digit NISN">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nama Lengkap</label>
+                                <input type="text" v-model="studentForm.name" class="form-control" required placeholder="Masukkan nama siswa">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Kelas</label>
+                                <select v-model="studentForm.class_name" class="form-select" required>
+                                    <option value="" disabled>-- Pilih Kelas --</option>
+                                    <option v-for="cls in classes" :key="cls.id" :value="cls.name">{{ cls.name }}</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Token Pemilih (5 Digit)</label>
+                                <div class="input-group">
+                                    <input type="text" v-model="studentForm.token" class="form-control fw-bold text-uppercase" maxlength="5" required>
+                                    <button class="btn btn-outline-secondary" type="button" @click="studentForm.token = generateUnique5DigitToken()">
+                                        <i class="bi bi-shuffle"></i> Acak 5 Digit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary fw-bold">Simpan Siswa</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: IMPOR SISWA DARI EXCEL -->
+        <div class="modal fade" id="importExcelModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="fw-bold modal-title"><i class="bi bi-file-earmark-excel-fill text-success me-2"></i>Impor Data Siswa dari Excel / CSV</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="upload-dropzone mb-3" @click="triggerStudentExcelImport">
+                            <i class="bi bi-cloud-arrow-up-fill text-success display-4 d-block mb-2"></i>
+                            <h6 class="fw-bold text-dark mb-1">Klik untuk Pilih File Excel / CSV (.xlsx, .xls, .csv)</h6>
+                            <p class="text-muted small mb-0">Sistem akan otomatis membaca kolom NISN, Nama Lengkap, dan Kelas.</p>
+                            <input type="file" ref="studentImportFileInput" @change="handleStudentExcelImport" accept=".xlsx, .xls, .csv" style="display: none;">
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoTokenCheck" v-model="importAutoGenerateToken">
+                                <label class="form-check-label fw-semibold small text-dark" for="autoTokenCheck">
+                                    Otomatis buatkan Token 5-Digit Unik jika belum ada
+                                </label>
+                            </div>
+                            <button @click="downloadExcelTemplate('xlsx')" class="btn btn-link btn-sm text-decoration-none">
+                                <i class="bi bi-download me-1"></i>Unduh Format Template
+                            </button>
+                        </div>
+
+                        <div v-if="studentImportPreviewList.length > 0">
+                            <h6 class="fw-bold text-dark mb-2">Pratinjau Data Impor ({{ studentImportPreviewList.length }} Siswa)</h6>
+                            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                                <table class="table table-sm table-hover align-middle">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>No</th>
+                                            <th>NISN</th>
+                                            <th>Nama Lengkap</th>
+                                            <th>Kelas</th>
+                                            <th>Token</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(item, idx) in studentImportPreviewList" :key="idx">
+                                            <td>{{ idx + 1 }}</td>
+                                            <td><code>{{ item.nisn || '-' }}</code></td>
+                                            <td class="fw-semibold text-dark">{{ item.name }}</td>
+                                            <td>{{ item.class_name }}</td>
+                                            <td><span class="badge bg-light text-primary border">{{ item.token || 'Auto 5-Digit' }}</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-success fw-bold" @click="confirmImportStudents" :disabled="studentImportPreviewList.length === 0">
+                            <i class="bi bi-box-arrow-in-down me-1"></i> Simpan {{ studentImportPreviewList.length }} Data Siswa
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: CANDIDATE EDIT/ADD -->
+        <div class="modal fade" id="candidateModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="fw-bold modal-title">{{ candidateForm.id ? 'Edit Kandidat' : 'Tambah Candidate Paslon Baru' }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="saveCandidate">
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Nomor Urut</label>
+                                    <input type="number" v-model.number="candidateForm.candidate_number" class="form-control" required min="1">
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label fw-semibold">URL Foto Paslon</label>
+                                    <input type="url" v-model="candidateForm.photo_url" class="form-control" placeholder="https://example.com/foto.jpg">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Nama Ketua OSIS</label>
+                                    <input type="text" v-model="candidateForm.chairman_name" class="form-control" required placeholder="Nama Calon Ketua">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Nama Wakil Ketua OSIS</label>
+                                    <input type="text" v-model="candidateForm.vice_chairman_name" class="form-control" required placeholder="Nama Calon Wakil">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Slogan / Tagline</label>
+                                    <input type="text" v-model="candidateForm.slogan" class="form-control" placeholder="Contoh: Bersama Mewujudkan OSIS Berprestasi">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Visi</label>
+                                    <textarea v-model="candidateForm.vision" class="form-control" rows="2" required placeholder="Tuliskan visi paslon..."></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Misi</label>
+                                    <textarea v-model="candidateForm.mission" class="form-control" rows="3" required placeholder="Tuliskan poin-poin misi paslon..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary fw-bold">Simpan Paslon</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+
+        const SUPABASE_URL = "https://pkdhaurwpaqklnlezquq.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrZGhhdXJ3cGFxa2xubGV6cXVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2MDM3NjEsImV4cCI6MjEwNTE3OTc2MX0.B4TjrCH4_VGOdE-RXiDwPs5iZIwZHl9zXQxur7f21kw";
+        
+        let supabaseClient = null;
+        try {
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (error) {
+            console.error("Supabase error:", error);
+        }
+
+        const app = createApp({
+            setup() {
+                const currentRole = ref('user');
+                const activeAdminTab = ref('token_generator');
+                const showMobileSidebar = ref(false);
+                const adminLoggedIn = ref(true);
+
+                // Export format options: 'xlsx', 'xls', 'csv'
+                const selectedExportFormat = ref('xlsx');
+
+                const defaultLogo = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'><circle cx='150' cy='150' r='142' fill='%23ffffff' stroke='%23000000' stroke-width='6'/><circle cx='150' cy='150' r='110' fill='%23ffffff' stroke='%23000000' stroke-width='4'/><path id='topArc' d='M 35,150 A 115,115 0 0,1 265,150' fill='none'/><path id='bottomArc' d='M 265,150 A 115,115 0 0,1 35,150' fill='none'/><text font-family='sans-serif' font-weight='800' font-size='24' fill='%23000000' text-anchor='middle'><textPath href='%23topArc' startOffset='50%'>SMP NEGERI 38</textPath></text><text font-family='sans-serif' font-weight='800' font-size='24' fill='%23000000' text-anchor='middle'><textPath href='%23bottomArc' startOffset='50%'>SEMARANG</textPath></text><circle cx='150' cy='150' r='108' fill='none' stroke='%23000000' stroke-width='4'/></svg>";
+                const candidate1Svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 350'><rect width='100%' height='100%' fill='%23eff6ff'/><rect x='170' y='270' width='160' height='40' rx='20' fill='%232563eb'/><text x='250' y='296' fill='%23ffffff' font-family='sans-serif' font-weight='800' font-size='18' text-anchor='middle'>PASLON 01</text></svg>";
+                const candidate2Svg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 350'><rect width='100%' height='100%' fill='%23ecfdf5'/><rect x='170' y='270' width='160' height='40' rx='20' fill='%2310b981'/><text x='250' y='296' fill='%23ffffff' font-family='sans-serif' font-weight='800' font-size='18' text-anchor='middle'>PASLON 02</text></svg>";
+                const defaultCandidatePhoto = candidate1Svg;
+
+                const toast = ref({ show: false, message: '', type: 'success', icon: 'bi-check-circle-fill' });
+
+                function triggerToast(message, type) {
+                    const toastType = type || 'success';
+                    toast.value = {
+                        show: true,
+                        message: message,
+                        type: toastType,
+                        icon: toastType === 'success' ? 'bi-check-circle-fill' : toastType === 'danger' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'
+                    };
+                    setTimeout(() => { toast.value.show = false; }, 4000);
+                }
+
+                const settings = ref({
+                    school_name: 'SMP Negeri 38 Semarang',
+                    election_period: '2026/2027',
+                    school_logo: defaultLogo,
+                    admin_username: 'admin',
+                    admin_password_hash: 'admin123'
+                });
+
+                const settingsForm = ref({ school_name: '', election_period: '', school_logo: '', admin_username: '', new_password: '' });
+
+                const classes = ref([]);
+                const students = ref([]);
+                const candidates = ref([]);
+
+                const loggedStudent = ref(null);
+                // Diperbarui: State login siswa hanya memerlukan token saja
+                const studentLoginForm = ref({ token: '' });
+                const selectedCandidateToVote = ref(null);
+                const countdownSeconds = ref(4);
+
+                const adminLoginForm = ref({ username: 'admin', password: '123' });
+
+                const classForm = ref({ id: null, name: '' });
+                const studentForm = ref({ id: null, nisn: '', name: '', class_name: '', token: '', has_voted: false });
+                const excelFileInput = ref(null);
+                const candidateForm = ref({ id: null, candidate_number: 1, chairman_name: '', vice_chairman_name: '', slogan: '', vision: '', mission: '', photo_url: '', vote_count: 0 });
+
+                // Impor Excel Khusus Data Siswa
+                const studentImportFileInput = ref(null);
+                const studentImportPreviewList = ref([]);
+                const importAutoGenerateToken = ref(true);
+
+                const tokenFormatMode = ref('alphanumeric');
+                const generatedTokenList = ref([]);
+
+                const studentSearch = ref('');
+                const studentClassFilter = ref('');
+                const studentStatusFilter = ref('');
+
+                const loading = ref({ login: false, submitVote: false });
+
+                let dashChart = null;
+                let voteBarChart = null;
+                let votePieChart = null;
+
+                const stats = computed(() => {
+                    const totalStudents = students.value.length;
+                    const votedCount = students.value.filter(s => s.has_voted).length;
+                    const unvotedCount = totalStudents - votedCount;
+                    const participationPercentage = totalStudents > 0 ? Math.round((votedCount / totalStudents) * 100) : 0;
+                    return { totalStudents, votedCount, unvotedCount, participationPercentage };
+                });
+
+                const filteredStudents = computed(() => {
+                    return students.value.filter(s => {
+                        const matchSearch = (s.name || '').toLowerCase().includes(studentSearch.value.toLowerCase()) ||
+                                            (s.nisn || '').includes(studentSearch.value) ||
+                                            (s.token || '').toLowerCase().includes(studentSearch.value.toLowerCase());
+                        const matchClass = !studentClassFilter.value || s.class_name === studentClassFilter.value;
+                        const matchStatus = !studentStatusFilter.value || (studentStatusFilter.value === 'voted' ? s.has_voted : !s.has_voted);
+                        return matchSearch && matchClass && matchStatus;
+                    });
+                });
+
+                // ALGORITMA TOKEN 5 DIGIT UNIK & ABSTRAK
+                function generateUnique5DigitToken(usedSet = new Set()) {
+                    const chars = tokenFormatMode.value === 'numeric' 
+                        ? '0123456789' 
+                        : '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Tanpa Karakter Membingungkan (0, O, 1, I)
+                    
+                    let token = '';
+                    let attempts = 0;
+                    do {
+                        token = '';
+                        for (let i = 0; i < 5; i++) {
+                            token += chars.charAt(Math.floor(Math.random() * chars.length));
+                        }
+                        attempts++;
+                        if (attempts > 10000) break; // Safety
+                    } while (usedSet.has(token) || students.value.some(s => s.token === token));
+
+                    usedSet.add(token);
+                    return token;
+                }
+
+                function triggerExcelImport() {
+                    if (excelFileInput.value) {
+                        excelFileInput.value.value = '';
+                        excelFileInput.value.click();
+                    }
+                }
+
+                function openImportExcelModal() {
+                    studentImportPreviewList.value = [];
+                    if (typeof bootstrap !== 'undefined') {
+                        new bootstrap.Modal(document.getElementById('importExcelModal')).show();
+                    }
+                }
+
+                function triggerStudentExcelImport() {
+                    if (studentImportFileInput.value) {
+                        studentImportFileInput.value.value = '';
+                        studentImportFileInput.value.click();
+                    }
+                }
+
+                async function handleStudentExcelImport(e) {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file || typeof XLSX === 'undefined') return;
+
+                    try {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+                        if (!sheetData || sheetData.length === 0) {
+                            triggerToast("File Excel / CSV kosong.", "warning");
+                            return;
+                        }
+
+                        let headerRowIdx = -1;
+                        let nameColIdx = -1, nisnColIdx = -1, classColIdx = -1, tokenColIdx = -1;
+
+                        for (let r = 0; r < Math.min(sheetData.length, 15); r++) {
+                            const row = sheetData[r];
+                            if (!Array.isArray(row)) continue;
+                            for (let c = 0; c < row.length; c++) {
+                                const val = String(row[c] || '').trim().toLowerCase();
+                                if (val.includes('nama') || val.includes('siswa') || val.includes('peserta')) {
+                                    headerRowIdx = r;
+                                    nameColIdx = c;
+                                    break;
+                                }
+                            }
+                            if (headerRowIdx !== -1) {
+                                const headerRow = sheetData[headerRowIdx];
+                                for (let c = 0; c < headerRow.length; c++) {
+                                    const val = String(headerRow[c] || '').trim().toLowerCase();
+                                    if (val.includes('nisn') || val.includes('nis')) nisnColIdx = c;
+                                    if (val.includes('kelas') || val.includes('rombel')) classColIdx = c;
+                                    if (val.includes('token') || val.includes('kode')) tokenColIdx = c;
+                                }
+                                break;
+                            }
+                        }
+
+                        const usedTokens = new Set();
+                        const results = [];
+
+                        if (headerRowIdx !== -1 && nameColIdx !== -1) {
+                            for (let r = headerRowIdx + 1; r < sheetData.length; r++) {
+                                const row = sheetData[r];
+                                if (!row || !row[nameColIdx]) continue;
+                                const rawName = String(row[nameColIdx]).trim();
+                                if (!rawName || rawName.toLowerCase().startsWith('total')) continue;
+
+                                const nisn = nisnColIdx !== -1 ? String(row[nisnColIdx] || '').trim() : '';
+                                const className = classColIdx !== -1 ? String(row[classColIdx] || '').trim() : 'Umum';
+                                let tokenVal = tokenColIdx !== -1 ? String(row[tokenColIdx] || '').trim() : '';
+
+                                if (!tokenVal && importAutoGenerateToken.value) {
+                                    tokenVal = generateUnique5DigitToken(usedTokens);
+                                }
+
+                                results.push({ nisn, name: rawName, class_name: className || 'Umum', token: tokenVal, has_voted: false });
+                            }
+                        } else {
+                            const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                            for (const row of jsonRows) {
+                                const nameKey = Object.keys(row).find(k => /nama|peserta|siswa|name/i.test(k));
+                                const name = nameKey ? String(row[nameKey]).trim() : '';
+                                if (!name) continue;
+
+                                const nisnKey = Object.keys(row).find(k => /nisn|nis/i.test(k));
+                                const classKey = Object.keys(row).find(k => /kelas|rombel|class/i.test(k));
+                                const tokenKey = Object.keys(row).find(k => /token|kode/i.test(k));
+
+                                let tokenVal = tokenKey ? String(row[tokenKey]).trim() : '';
+                                if (!tokenVal && importAutoGenerateToken.value) {
+                                    tokenVal = generateUnique5DigitToken(usedTokens);
+                                }
+
+                                results.push({ nisn: nisnKey ? String(row[nisnKey]).trim() : '', name, class_name: classKey ? String(row[classKey]).trim() : 'Umum', token: tokenVal, has_voted: false });
+                            }
+                        }
+
+                        studentImportPreviewList.value = results;
+                        if (results.length > 0) {
+                            triggerToast(`Berhasil membaca ${results.length} data siswa dari Excel!`, "success");
+                        } else {
+                            triggerToast("Tidak ada data siswa valid yang ditemukan di file.", "warning");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        triggerToast("Gagal memproses file Excel.", "danger");
+                    }
+                }
+
+                function confirmImportStudents() {
+                    if (studentImportPreviewList.value.length === 0) return;
+
+                    let addedCount = 0;
+                    const usedTokens = new Set();
+
+                    studentImportPreviewList.value.forEach(item => {
+                        let tokenToUse = item.token;
+                        if (!tokenToUse) {
+                            tokenToUse = generateUnique5DigitToken(usedTokens);
+                        }
+
+                        if (item.class_name && !classes.value.some(c => c.name.toLowerCase() === item.class_name.toLowerCase())) {
+                            classes.value.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 3), name: item.class_name });
+                        }
+
+                        const exists = students.value.some(s => (s.nisn && s.nisn === item.nisn) || s.name.toLowerCase() === item.name.toLowerCase());
+                        if (!exists) {
+                            students.value.push({
+                                id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                                nisn: item.nisn,
+                                name: item.name,
+                                class_name: item.class_name,
+                                token: tokenToUse,
+                                has_voted: false
+                            });
+                            addedCount++;
+                        }
+                    });
+
+                    triggerToast(`Berhasil mengimpor ${addedCount} siswa baru ke sistem!`, "success");
+                    studentImportPreviewList.value = [];
+                    if (typeof bootstrap !== 'undefined') {
+                        const modalEl = document.getElementById('importExcelModal');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        }
+                    }
+                }
+
+                function handleExcelDrop(e) {
+                    const files = e.dataTransfer.files;
+                    if (files && files.length > 0) {
+                        processExcelFile(files[0]);
+                    }
+                }
+
+                async function handleExcelImport(event) {
+                    const file = event.target.files && event.target.files[0];
+                    if (file) {
+                        processExcelFile(file);
+                    }
+                }
+
+                async function processExcelFile(file) {
+                    if (typeof XLSX === 'undefined') {
+                        triggerToast("Library SheetJS Excel belum siap.", "danger");
+                        return;
+                    }
+
+                    try {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+                        if (!sheetData || sheetData.length === 0) {
+                            triggerToast("File Excel / CSV kosong.", "warning");
+                            return;
+                        }
+
+                        let headerRowIndex = -1;
+                        let nameColIdx = -1;
+                        let nisnColIdx = -1;
+                        let classColIdx = -1;
+
+                        for (let r = 0; r < Math.min(sheetData.length, 15); r++) {
+                            const row = sheetData[r];
+                            if (!Array.isArray(row)) continue;
+
+                            for (let c = 0; c < row.length; c++) {
+                                const val = String(row[c] || '').trim().toLowerCase();
+                                if (val.includes('nama') || val.includes('peserta') || val.includes('siswa') || val.includes('murid')) {
+                                    headerRowIndex = r;
+                                    nameColIdx = c;
+                                    break;
+                                }
+                            }
+                            if (headerRowIndex !== -1) {
+                                const headerRow = sheetData[headerRowIndex];
+                                for (let c = 0; c < headerRow.length; c++) {
+                                    const val = String(headerRow[c] || '').trim().toLowerCase();
+                                    if (val.includes('nisn') || val.includes('nis') || val.includes('no_induk')) nisnColIdx = c;
+                                    if (val.includes('kelas') || val.includes('rombel') || val.includes('class')) classColIdx = c;
+                                }
+                                break;
+                            }
+                        }
+
+                        const usedTokens = new Set();
+                        const results = [];
+
+                        if (headerRowIndex !== -1 && nameColIdx !== -1) {
+                            for (let r = headerRowIndex + 1; r < sheetData.length; r++) {
+                                const row = sheetData[r];
+                                if (!row || !row[nameColIdx]) continue;
+
+                                const rawName = String(row[nameColIdx]).trim();
+                                if (!rawName || rawName.toLowerCase().startsWith('total') || rawName.toLowerCase().startsWith('jumlah')) continue;
+
+                                const nisn = nisnColIdx !== -1 ? String(row[nisnColIdx] || '').trim() : '';
+                                const className = classColIdx !== -1 ? String(row[classColIdx] || '').trim() : 'Umum';
+
+                                const token5Digit = generateUnique5DigitToken(usedTokens);
+
+                                results.push({
+                                    nisn: nisn,
+                                    name: rawName,
+                                    class_name: className || 'Umum',
+                                    token: token5Digit,
+                                    has_voted: false
+                                });
+                            }
+                        } else {
+                            const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                            for (const row of jsonRows) {
+                                const nameKeys = Object.keys(row).filter(k => /nama|peserta|siswa|murid|name/i.test(k));
+                                const nameKey = nameKeys[0];
+                                const name = nameKey ? String(row[nameKey]).trim() : '';
+
+                                if (!name) continue;
+
+                                const nisnKey = Object.keys(row).find(k => /nisn|nis/i.test(k));
+                                const classKey = Object.keys(row).find(k => /kelas|rombel|class/i.test(k));
+
+                                const token5Digit = generateUnique5DigitToken(usedTokens);
+
+                                results.push({
+                                    nisn: nisnKey ? String(row[nisnKey]).trim() : '',
+                                    name: name,
+                                    class_name: classKey ? String(row[classKey]).trim() : 'Umum',
+                                    token: token5Digit,
+                                    has_voted: false
+                                });
+                            }
+                        }
+
+                        if (results.length > 0) {
+                            generatedTokenList.value = results;
+                            triggerToast(`Berhasil membaca kolom Nama & membuat ${results.length} token 5 digit unik!`, "success");
+                        } else {
+                            triggerToast("Kolom Nama tidak ditemukan pada file. Pastikan ada judul kolom 'Nama' atau 'Nama Lengkap'.", "warning");
+                        }
+
+                    } catch (error) {
+                        console.error(error);
+                        triggerToast("Gagal membaca file. Pastikan file berformat .xlsx, .xls, atau .csv", "danger");
+                    }
+                }
+
+                function downloadGeneratedTokensExcel(fmt = selectedExportFormat.value) {
+                    if (generatedTokenList.value.length === 0) return;
+
+                    const dataToExport = generatedTokenList.value.map((s, idx) => ({
+                        'No': idx + 1,
+                        'NISN': s.nisn || '-',
+                        'Nama Lengkap': s.name,
+                        'Kelas': s.class_name,
+                        'Token Pemilih (5 Digit)': s.token
+                    }));
+
+                    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+                    worksheet['!cols'] = [{ wch: 6 }, { wch: 16 }, { wch: 35 }, { wch: 16 }, { wch: 25 }];
+
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Token Siswa");
+
+                    let fileName = `Daftar_Token_5_Digit_Siswa.${fmt}`;
+                    let bookType = 'xlsx';
+                    if (fmt === 'xls') bookType = 'biff8';
+                    else if (fmt === 'csv') bookType = 'csv';
+
+                    XLSX.writeFile(workbook, fileName, { bookType: bookType });
+                    triggerToast(`File .${fmt.toUpperCase()} berhasil diunduh dengan kolom Nama!`, "success");
+                }
+
+                function downloadExcelTemplate(fmt = 'xlsx') {
+                    const templateData = [
+                        { 'NISN': '0051234567', 'Nama Lengkap': 'Ahmad Fauzi', 'Kelas': '7A' },
+                        { 'NISN': '0051234568', 'Nama Lengkap': 'Siti Rahma', 'Kelas': '7B' }
+                    ];
+                    const worksheet = XLSX.utils.json_to_sheet(templateData);
+                    worksheet['!cols'] = [{ wch: 16 }, { wch: 35 }, { wch: 16 }];
+
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Template Siswa");
+
+                    let bookType = fmt === 'xls' ? 'biff8' : (fmt === 'csv' ? 'csv' : 'xlsx');
+                    XLSX.writeFile(workbook, `Format_Import_Siswa_eOSIS.${fmt}`, { bookType: bookType });
+                }
+
+                function exportStudentsToExcel(fmt = selectedExportFormat.value) {
+                    const dataToExport = filteredStudents.value.map((std, idx) => ({
+                        'No': idx + 1,
+                        'NISN': std.nisn || '-',
+                        'Nama Lengkap': std.name,
+                        'Kelas': std.class_name,
+                        'Token 5 Digit': std.token,
+                        'Status Hak Suara': std.has_voted ? 'Sudah Memilih' : 'Belum Memilih'
+                    }));
+
+                    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+                    worksheet['!cols'] = [{ wch: 6 }, { wch: 16 }, { wch: 35 }, { wch: 16 }, { wch: 22 }, { wch: 20 }];
+
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Siswa eOSIS");
+
+                    let bookType = fmt === 'xls' ? 'biff8' : (fmt === 'csv' ? 'csv' : 'xlsx');
+                    XLSX.writeFile(workbook, `Data_Siswa_eOSIS.${fmt}`, { bookType: bookType });
+                    triggerToast(`Data siswa berhasil diekspor ke format .${fmt.toUpperCase()}`, "success");
+                }
+
+                function importGeneratedToDatabase() {
+                    if (generatedTokenList.value.length === 0) return;
+
+                    let addedCount = 0;
+                    generatedTokenList.value.forEach(item => {
+                        const exists = students.value.some(s => s.name.toLowerCase() === item.name.toLowerCase());
+                        if (!exists) {
+                            const newStudent = { id: Date.now().toString() + Math.random().toString(36).substr(2, 4), ...item };
+                            students.value.push(newStudent);
+                            addedCount++;
+                        }
+                    });
+
+                    triggerToast(`Berhasil menambahkan ${addedCount} siswa baru ke data voting!`, "success");
+                    activeAdminTab.value = 'students';
+                }
+
+                function generateAllTokens5Digit() {
+                    const usedSet = new Set();
+                    students.value.forEach(s => {
+                        s.token = generateUnique5DigitToken(usedSet);
+                    });
+                    triggerToast("Token seluruh siswa telah diperbarui ke 5 digit unik!", "success");
+                }
+
+                async function fetchInitialData() {
+                    if (classes.value.length === 0) {
+                        classes.value = [
+                            { id: '1', name: '7A' }, { id: '2', name: '7B' }, { id: '3', name: '8A' }, { id: '4', name: '9A' }
+                        ];
+                    }
+                    if (candidates.value.length === 0) {
+                        candidates.value = [
+                            {
+                                id: 'c1', candidate_number: 1, chairman_name: 'Ahmad Faiz', vice_chairman_name: 'Siti Nurhaliza',
+                                slogan: 'Transformasi Digital OSIS Inovatif', vision: 'Mewujudkan OSIS sebagai wadah aspirasi siswa yang adaptif.',
+                                mission: '1. Mengembangkan minat bakat akademik & seni\n2. Digitalisasi event sekolah', photo_url: candidate1Svg, vote_count: 12
+                            },
+                            {
+                                id: 'c2', candidate_number: 2, chairman_name: 'Budi Santoso', vice_chairman_name: 'Dewi Lestari',
+                                slogan: 'Inklusif, Kolaboratif, Berprestasi', vision: 'Menciptakan lingkungan sekolah yang peduli lingkungan.',
+                                mission: '1. Meningkatkan kegiatan ekstra\n2. Pendampingan kesiswaan', photo_url: candidate2Svg, vote_count: 18
+                            }
+                        ];
+                    }
+                    if (students.value.length === 0) {
+                        students.value = [
+                            { id: 's1', nisn: '0051234567', name: 'Andi Pratama', class_name: '7A', token: 'K89F2', has_voted: true },
+                            { id: 's2', nisn: '0051234568', name: 'Beringin Putri', class_name: '7A', token: 'X93P1', has_voted: false },
+                            { id: 's3', nisn: '0051234569', name: 'Citra Amelia', class_name: '8A', token: 'M72L4', has_voted: false }
+                        ];
+                    }
+                }
+
+                // Diperbarui: Validasi login siswa sekarang cukup mencocokkan token saja tanpa memasukkan nama
+                function loginStudent() {
+                    const inputToken = studentLoginForm.value.token.trim().toUpperCase();
+                    
+                    const student = students.value.find(s => (s.token || '').trim().toUpperCase() === inputToken);
+                    if (!student) {
+                        triggerToast("Token Akses tidak valid atau tidak terdaftar. Periksa kembali token Anda.", "danger");
+                        return;
+                    }
+
+                    loggedStudent.value = student;
+                    triggerToast(`Selamat datang, ${student.name}!`, "success");
+                }
+
+                function logoutStudent() {
+                    loggedStudent.value = null;
+                    studentLoginForm.value = { token: '' };
+                }
+
+                function confirmVoteModal(candidate) {
+                    selectedCandidateToVote.value = candidate;
+                    if (typeof bootstrap !== 'undefined') {
+                        new bootstrap.Modal(document.getElementById('confirmVoteModal')).show();
+                    }
+                }
+
+                function submitVote() {
+                    if (!loggedStudent.value || !selectedCandidateToVote.value) return;
+                    
+                    const std = students.value.find(s => s.id === loggedStudent.value.id);
+                    if (std) std.has_voted = true;
+                    
+                    const cand = candidates.value.find(c => c.id === selectedCandidateToVote.value.id);
+                    if (cand) cand.vote_count = (cand.vote_count || 0) + 1;
+
+                    loggedStudent.value.has_voted = true;
+
+                    if (typeof bootstrap !== 'undefined') {
+                        const modalEl = document.getElementById('confirmVoteModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+
+                        countdownSeconds.value = 4;
+                        const successModal = new bootstrap.Modal(document.getElementById('voteSuccessModal'));
+                        successModal.show();
+                        setTimeout(() => {
+                            successModal.hide();
+                            logoutStudent();
+                        }, 4000);
+                    }
+                }
+
+                function loginAdmin() {
+                    if (adminLoginForm.value.username === settings.value.admin_username && adminLoginForm.value.password === '123') {
+                        adminLoggedIn.value = true;
+                        triggerToast("Berhasil masuk sebagai Admin OSIS", "success");
+                    } else {
+                        triggerToast("Username atau Password Admin salah!", "danger");
+                    }
+                }
+
+                function logoutAdmin() {
+                    adminLoggedIn.value = false;
+                    currentRole.value = 'user';
+                }
+
+                function switchToAdminLogin() { currentRole.value = 'admin'; }
+                function switchToUserLogin() { currentRole.value = 'user'; }
+
+                function getTabTitle(tab) {
+                    const titles = {
+                        token_generator: 'Generator Token 5 Digit (Excel)',
+                        dashboard: 'Beranda & Statistik',
+                        classes: 'Manajemen Data Kelas',
+                        students: 'Manajemen Data Siswa & Token',
+                        candidates: 'Manajemen Calon Pasangan Kandidat',
+                        votes: 'Laporan Perolehan Suara',
+                        settings: 'Pengaturan System'
+                    };
+                    return titles[tab] || 'Admin Panel';
+                }
+
+                function downloadExcelTemplate() {
+                    const templateData = [
+                        { 'NISN': '0051234567', 'Nama Lengkap': 'Ahmad Fauzi', 'Kelas': '7A' },
+                        { 'NISN': '0051234568', 'Nama Lengkap': 'Siti Rahma', 'Kelas': '7B' }
+                    ];
+                    const worksheet = XLSX.utils.json_to_sheet(templateData);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Format Siswa");
+                    XLSX.writeFile(workbook, "Format_Import_Siswa.xlsx");
+                }
+
+                function exportStudentsToExcel() {
+                    const dataToExport = filteredStudents.value.map((std, idx) => ({
+                        'No': idx + 1, 'NISN': std.nisn || '-', 'Nama Lengkap': std.name, 'Kelas': std.class_name, 'Token 5 Digit': std.token, 'Status': std.has_voted ? 'Sudah Memilih' : 'Belum Memilih'
+                    }));
+                    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Siswa");
+                    XLSX.writeFile(workbook, "Data_Siswa_eOSIS.xlsx");
+                }
+
+                function getStudentCountByClass(className) {
+                    return students.value.filter(s => s.class_name === className).length;
+                }
+
+                function getCandidatePercentage(count) {
+                    const total = stats.value.votedCount;
+                    if (!total || total === 0) return 0;
+                    return Math.round(((count || 0) / total) * 100);
+                }
+
+                function openClassModal(cls) {
+                    classForm.value = cls ? { id: cls.id, name: cls.name } : { id: null, name: '' };
+                    if (typeof bootstrap !== 'undefined') new bootstrap.Modal(document.getElementById('classModal')).show();
+                }
+
+                function saveClass() {
+                    if (classForm.value.id) {
+                        const idx = classes.value.findIndex(c => c.id === classForm.value.id);
+                        if (idx !== -1) classes.value[idx].name = classForm.value.name;
+                    } else {
+                        classes.value.push({ id: Date.now().toString(), name: classForm.value.name });
+                    }
+                    if (typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance(document.getElementById('classModal')).hide();
+                }
+
+                function deleteClass(id) { classes.value = classes.value.filter(c => c.id !== id); }
+
+                function openStudentModal(std) {
+                    studentForm.value = std ? { ...std } : { id: null, nisn: '', name: '', class_name: classes.value[0]?.name || '', token: generateUnique5DigitToken(), has_voted: false };
+                    if (typeof bootstrap !== 'undefined') new bootstrap.Modal(document.getElementById('studentModal')).show();
+                }
+
+                function saveStudent() {
+                    if (studentForm.value.id) {
+                        const idx = students.value.findIndex(s => s.id === studentForm.value.id);
+                        if (idx !== -1) students.value[idx] = { ...studentForm.value };
+                    } else {
+                        students.value.push({ ...studentForm.value, id: Date.now().toString() });
+                    }
+                    if (typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
+                }
+
+                function resetStudentVote(std) { std.has_voted = false; }
+                function deleteStudent(id) { students.value = students.value.filter(s => s.id !== id); }
+
+                function openCandidateModal(cand) {
+                    candidateForm.value = cand ? { ...cand } : { id: null, candidate_number: candidates.value.length + 1, chairman_name: '', vice_chairman_name: '', slogan: '', vision: '', mission: '', photo_url: '', vote_count: 0 };
+                    if (typeof bootstrap !== 'undefined') new bootstrap.Modal(document.getElementById('candidateModal')).show();
+                }
+
+                function saveCandidate() {
+                    if (candidateForm.value.id) {
+                        const idx = candidates.value.findIndex(c => c.id === candidateForm.value.id);
+                        if (idx !== -1) candidates.value[idx] = { ...candidateForm.value };
+                    } else {
+                        candidates.value.push({ ...candidateForm.value, id: Date.now().toString() });
+                    }
+                    if (typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance(document.getElementById('candidateModal')).hide();
+                }
+
+                function deleteCandidate(id) { candidates.value = candidates.value.filter(c => c.id !== id); }
+
+                function saveSettings() {
+                    settings.value.school_name = settingsForm.value.school_name;
+                    settings.value.election_period = settingsForm.value.election_period;
+                    triggerToast("Pengaturan berhasil disimpan!", "success");
+                }
+
+                function handleLogoFileUpload(e) {
+                    const file = e.target.files && e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => settingsForm.value.school_logo = ev.target.result;
+                        reader.readAsDataURL(file);
+                    }
+                }
+
+                onMounted(() => {
+                    fetchInitialData();
+                });
+
+                return {
+                    currentRole, activeAdminTab, showMobileSidebar, adminLoggedIn, defaultLogo, defaultCandidatePhoto,
+                    toast, settings, settingsForm, classes, students, candidates, loggedStudent, studentLoginForm,
+                    selectedCandidateToVote, countdownSeconds, adminLoginForm, classForm, studentForm, excelFileInput,
+                    candidateForm, tokenFormatMode, generatedTokenList, studentSearch, studentClassFilter, studentStatusFilter,
+                    loading, stats, filteredStudents, selectedExportFormat,
+                    studentImportFileInput, studentImportPreviewList, importAutoGenerateToken, openImportExcelModal,
+                    triggerStudentExcelImport, handleStudentExcelImport, confirmImportStudents,
+                    generateUnique5DigitToken, triggerExcelImport, handleExcelDrop, handleExcelImport,
+                    downloadGeneratedTokensExcel, importGeneratedToDatabase, generateAllTokens5Digit,
+                    loginStudent, logoutStudent, confirmVoteModal, submitVote, loginAdmin, logoutAdmin,
+                    switchToAdminLogin, switchToUserLogin, getTabTitle, downloadExcelTemplate, exportStudentsToExcel,
+                    getStudentCountByClass, getCandidatePercentage, openClassModal, saveClass, deleteClass,
+                    openStudentModal, saveStudent, resetStudentVote, deleteStudent, openCandidateModal, saveCandidate,
+                    deleteCandidate, saveSettings, handleLogoFileUpload
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
